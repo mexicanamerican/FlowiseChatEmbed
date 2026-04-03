@@ -81665,7 +81665,7 @@ const Bot = botProps => {
       }
       return fetch(input, init);
     };
-    fetchEventSource(`${props.apiHost}/'api/v1/prediction'}/${chatflowid}`, {
+    fetchEventSource(`${props.apiHost}/api/v1/prediction/${chatflowid}`, {
       openWhenHidden: true,
       method: 'POST',
       body: JSON.stringify(params),
