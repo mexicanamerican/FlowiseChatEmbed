@@ -1,0 +1,230 @@
+name: Publish flowise-embed + flowise-embed-react
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: "Version bump: patch / minor / major — or exact version like 3.2.0"
+        required: true
+        default: patch
+      recovery_version:
+        description: "Recovery only: exact version if flowise-embed is already published but flowise-embed-react failed. Skips embed steps."
+        required: false
+      dry_run:
+        description: "Test mode: builds and validates everything but does not publish to npm or push to git."
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      # ── Validate inputs (C-1, C-2, H-1) ──────────────────────────────────
+      - name: Validate inputs
+        env:
+          BUMP_TYPE: ${{ inputs.bump_type }}
+          RECOVERY_VERSION: ${{ inputs.recovery_version }}
+        run: |
+          SEMVER_RE='^[0-9]+\.[0-9]+\.[0-9]+$'
+          BUMP_RE='^(patch|minor|major)$'
+          if [ -n "$RECOVERY_VERSION" ]; then
+            if ! echo "$RECOVERY_VERSION" | grep -Eq "$SEMVER_RE"; then
+              echo "ERROR: recovery_version must be a valid semver (e.g. 3.2.0), got: $RECOVERY_VERSION"
+              exit 1
+            fi
+          else
+            if ! echo "$BUMP_TYPE" | grep -Eq "$BUMP_RE" && ! echo "$BUMP_TYPE" | grep -Eq "$SEMVER_RE"; then
+              echo "ERROR: bump_type must be patch, minor, major, or a semver (e.g. 3.2.0), got: $BUMP_TYPE"
+              exit 1
+            fi
+          fi
+
+      - name: Checkout FlowiseChatEmbed
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          path: flowise-embed
+          token: ${{ secrets.PAT_GITHUB }}
+
+      - name: Checkout FlowiseEmbedReact
+        uses: actions/checkout@v4
+        with:
+          repository: FlowiseAI/FlowiseEmbedReact
+          fetch-depth: 1
+          path: flowise-embed-react
+          token: ${{ secrets.PAT_GITHUB }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Configure git
+        run: |
+          git config --global user.name  "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Resolve target version
+        id: version
+        working-directory: flowise-embed
+        env:
+          BUMP_TYPE: ${{ inputs.bump_type }}
+          RECOVERY_VERSION: ${{ inputs.recovery_version }}
+        run: |
+          if [ -n "$RECOVERY_VERSION" ]; then
+            echo "Recovery mode — skipping flowise-embed publish"
+            echo "new_version=${RECOVERY_VERSION}" >> "$GITHUB_OUTPUT"
+            echo "skip_embed=true" >> "$GITHUB_OUTPUT"
+          else
+            NEW=$(npm version "$BUMP_TYPE" --no-git-tag-version)
+            NEW="${NEW#v}"
+            if ! echo "$NEW" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "ERROR: npm version produced unexpected output: $NEW"
+              exit 1
+            fi
+            echo "new_version=${NEW}" >> "$GITHUB_OUTPUT"
+            echo "skip_embed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── flowise-embed ─────────────────────────────────────────────────────
+
+      - name: Install flowise-embed dependencies
+        if: steps.version.outputs.skip_embed == 'false'
+        working-directory: flowise-embed
+        run: yarn install --frozen-lockfile
+        env:
+          HUSKY: "0"
+
+      - name: Build flowise-embed
+        if: steps.version.outputs.skip_embed == 'false'
+        working-directory: flowise-embed
+        run: yarn build
+
+      - name: Publish flowise-embed to npm
+        id: publish_embed
+        if: steps.version.outputs.skip_embed == 'false'
+        working-directory: flowise-embed
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "DRY RUN — validating package with --dry-run"
+            npm publish --access public --dry-run
+          else
+            npm publish --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Commit and tag flowise-embed
+        if: steps.version.outputs.skip_embed == 'false' && inputs.dry_run == 'false'
+        working-directory: flowise-embed
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.new_version }}
+        run: |
+          TAG="flowise-embed@${NEW_VERSION}"
+          if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "${TAG}"; then
+            echo "Tag ${TAG} already exists on remote — skipping commit+tag"
+            exit 0
+          fi
+          git add package.json
+          git commit -m "${TAG}"
+          git tag "${TAG}"
+          git push origin HEAD "${TAG}"
+
+      # ── flowise-embed-react ───────────────────────────────────────────────
+
+      - name: Wait for flowise-embed on npm
+        if: inputs.dry_run == false
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.new_version }}
+        run: |
+          TARGET="flowise-embed@${NEW_VERSION}"
+          for i in $(seq 1 12); do
+            npm view "${TARGET}" version >/dev/null 2>&1 && echo "${TARGET} available" && exit 0
+            echo "Attempt ${i}/12 — waiting 10s..."
+            sleep 10
+          done
+          echo "ERROR: ${TARGET} not available after 2 min" && exit 1
+
+      - name: Update flowise-embed-react versions
+        working-directory: flowise-embed-react
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.new_version }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          if [ "$DRY_RUN" != "true" ]; then
+            npm pkg set "devDependencies.flowise-embed=${NEW_VERSION}"
+          else
+            echo "DRY RUN — skipping devDependency update (version not on npm yet)"
+          fi
+          npm pkg set "version=${NEW_VERSION}"
+
+      - name: Install flowise-embed-react dependencies
+        working-directory: flowise-embed-react
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            yarn install --frozen-lockfile
+          else
+            yarn install
+          fi
+        env:
+          HUSKY: "0"
+
+      - name: Build flowise-embed-react
+        working-directory: flowise-embed-react
+        run: yarn build
+
+      - name: Publish flowise-embed-react to npm
+        id: publish_react
+        working-directory: flowise-embed-react
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "DRY RUN — validating package with --dry-run"
+            npm publish --access public --dry-run
+          else
+            npm publish --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Commit and tag flowise-embed-react
+        if: inputs.dry_run == false
+        working-directory: flowise-embed-react
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.new_version }}
+        run: |
+          TAG="flowise-embed-react@${NEW_VERSION}"
+          if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "${TAG}"; then
+            echo "Tag ${TAG} already exists on remote — skipping commit+tag"
+            exit 0
+          fi
+          git add package.json yarn.lock
+          git commit -m "${TAG}"
+          git tag "${TAG}"
+          git push origin HEAD "${TAG}"
+
+      - name: Summary
+        if: always()
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.new_version }}
+          SKIP_EMBED: ${{ steps.version.outputs.skip_embed }}
+          EMBED_OUTCOME: ${{ steps.publish_embed.outcome }}
+          REACT_OUTCOME: ${{ steps.publish_react.outcome }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "## Dry Run Results (nothing was published or pushed)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## Publish Results" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "$SKIP_EMBED" = "true" ]; then
+            echo "- flowise-embed@${NEW_VERSION}: skipped (recovery mode)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- flowise-embed@${NEW_VERSION}: ${EMBED_OUTCOME:-not reached}" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- flowise-embed-react@${NEW_VERSION}: ${REACT_OUTCOME:-not reached}" >> $GITHUB_STEP_SUMMARY
