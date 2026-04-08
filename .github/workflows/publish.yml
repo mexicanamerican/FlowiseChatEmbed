@@ -331,12 +331,29 @@ jobs:
         run: |
           npm pkg set "version=${NEW_VERSION}"
           npm pkg set "devDependencies.flowise-embed=${NEW_VERSION}"
+          yarn upgrade flowise-embed@${NEW_VERSION}
 
       - name: Install flowise-embed-react dependencies
         working-directory: flowise-embed-react
-        run: yarn install
         env:
+          NEW_VERSION: ${{ needs.dry-run.outputs.version }}
           HUSKY: '0'
+        run: |
+          yarn install
+
+      - name: Verify flowise-embed version in lock file
+        working-directory: flowise-embed-react
+        env:
+          NEW_VERSION: ${{ needs.dry-run.outputs.version }}
+        run: |
+          if ! grep -q "flowise-embed@${NEW_VERSION}" yarn.lock 2>/dev/null && \
+             ! grep -A1 '"flowise-embed"' yarn.lock | grep -q "${NEW_VERSION}"; then
+            echo "::error::yarn.lock does not contain flowise-embed@${NEW_VERSION}"
+            echo "Lock file flowise-embed entries:"
+            grep -A5 "flowise-embed" yarn.lock || true
+            exit 1
+          fi
+          echo "Verified: flowise-embed@${NEW_VERSION} resolved in yarn.lock"
 
       - name: Build flowise-embed-react
         working-directory: flowise-embed-react
@@ -349,6 +366,10 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           TAG: ${{ inputs.tag }}
+
+      - name: Restore flowise-embed dependency tag to latest
+        working-directory: flowise-embed-react
+        run: npm pkg set "devDependencies.flowise-embed=latest"
 
       - name: Create flowise-embed-react version bump PR
         working-directory: flowise-embed-react

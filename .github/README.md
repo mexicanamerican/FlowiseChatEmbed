@@ -22,7 +22,7 @@ workflow_dispatch (bump, tag, optional: custom_version / recovery_version)
     poll npm registry until new version is available
          |
          v
-    flowise-embed-react: update dep + version → install → build → npm publish --tag <tag> → create version bump PR
+    flowise-embed-react: update dep + version → yarn upgrade → install → verify lock file → build → npm publish --tag <tag> → restore dep tag to latest → create version bump PR
 ```
 
 ## Usage
@@ -133,7 +133,9 @@ Both packages are published with the same dist-tag. Use `latest` for stable rele
 
 ### Dependency update in FlowiseEmbedReact
 
-The workflow sets `devDependencies.flowise-embed` to the exact new version using `npm pkg set`. This changes the specifier (e.g. from `"latest"` to `"3.1.4"`), which forces yarn to re-resolve from the registry and update `yarn.lock`. Both `package.json` and `yarn.lock` are included in the version bump PR.
+The workflow pins `devDependencies.flowise-embed` to the exact new version using `npm pkg set`, then runs `yarn upgrade flowise-embed@<version>` to explicitly force yarn to resolve and lock that version — this is more reliable than relying on `yarn install` alone to detect the `package.json` change. A verification step then greps `yarn.lock` to confirm the correct version was resolved, failing the build if not.
+
+After publishing, the workflow restores the dependency specifier back to `"latest"` before creating the version bump PR. This means the PR commits `package.json` with `"flowise-embed": "latest"` and `yarn.lock` with the resolved version pinned.
 
 ### npm registry propagation
 
