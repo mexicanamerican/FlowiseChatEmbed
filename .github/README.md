@@ -5,19 +5,24 @@ A single GitHub Actions workflow that publishes both `flowise-embed` and `flowis
 ## Flow
 
 ```
-workflow_dispatch (bump_type: patch / minor / major / exact version)
+workflow_dispatch (bump, tag, optional: custom_version / recovery_version)
          |
          v
-  reviewer approves (environment gate)
+  dry-run job (no approval needed):
+    validate inputs → build both packages → npm publish --dry-run → show package contents + version in summary
          |
          v
-  flowise-embed: bump version -> install -> build -> npm publish -> commit + tag + push
+  reviewer approves (npm-publish environment gate)
          |
          v
-  poll npm registry until new version is available
+  publish job:
+    flowise-embed: set version → install → build → npm publish --tag <tag> → create version bump PR
          |
          v
-  flowise-embed-react: update dep + version -> install (updates yarn.lock) -> build -> npm publish -> commit + tag + push
+    poll npm registry until new version is available
+         |
+         v
+    flowise-embed-react: update dep + version → install → build → npm publish --tag <tag> → create version bump PR
 ```
 
 ## Usage
@@ -25,68 +30,128 @@ workflow_dispatch (bump_type: patch / minor / major / exact version)
 ### Publishing a new version
 
 1. Go to **Actions** > **"Publish flowise-embed + flowise-embed-react"** > **Run workflow**
-2. Set `bump_type`:
-   - `patch` — 3.1.2 -> 3.1.3
-   - `minor` — 3.1.2 -> 3.2.0
-   - `major` — 3.1.2 -> 4.0.0
-   - Or an exact version like `3.2.0`
-3. Leave `recovery_version` empty
-4. Approve the environment gate when prompted
-5. Both packages publish to npm and both repos receive a version commit + git tag
+2. Set `bump`:
+   - `patch` — 3.1.3 → 3.1.4
+   - `minor` — 3.1.3 → 3.2.0
+   - `major` — 3.1.3 → 4.0.0
+   - `prerelease` — 3.1.3 → 3.1.4-dev.0
+   - `custom` — set any exact version in the `custom_version` field
+3. Set `tag`:
+   - `latest` (default) — all `npm install flowise-embed` users get this version
+   - `dev` — only `npm install flowise-embed@dev` users get this version
+4. Leave `recovery_version` empty
+5. **Review the dry-run job summary** — check the resolved version, package contents, and dry-run publish output
+6. **Approve the publish job** via the `npm-publish` environment gate
+7. Both packages publish to npm and version bump PRs are created in both repos
+
+Or via CLI:
+
+```shell
+gh workflow run publish.yml -f bump=patch -f tag=latest
+gh workflow run publish.yml -f bump=prerelease -f tag=dev
+gh workflow run publish.yml -f bump=custom -f custom_version=3.2.0 -f tag=latest
+```
 
 ### Recovery
 
 If `flowise-embed` published successfully but `flowise-embed-react` failed:
 
 1. Go to **Actions** > **"Publish flowise-embed + flowise-embed-react"** > **Run workflow**
-2. Leave `bump_type` at default (it won't be used)
-3. Set `recovery_version` to the version already published, e.g. `3.1.3`
-4. Approve the environment gate
-5. All `flowise-embed` steps are skipped — only `flowise-embed-react` is built and published
+2. Leave `bump` at default (it won't be used)
+3. Set `recovery_version` to the version already published, e.g. `3.1.4`
+4. Review dry-run and approve the publish job
+5. All `flowise-embed` steps are skipped — only `flowise-embed-react` is built, published, and gets a version bump PR
+
+### Prerelease versions
+
+Use `bump: prerelease` with `tag: dev` to publish dev versions:
+
+| Current version | After prerelease bump |
+| --------------- | --------------------- |
+| `3.1.3`         | `3.1.4-dev.0`         |
+| `3.1.4-dev.0`   | `3.1.4-dev.1`         |
+| `3.1.4-dev.1`   | `3.1.4-dev.2`         |
+
+Promote to stable with `bump: patch` (or `minor`/`major`) and `tag: latest`.
+
+### Verifying a publish
+
+After the publish job completes, confirm both packages are on npm with matching versions:
+
+```shell
+# Check specific version exists
+npm view flowise-embed@<version> version
+npm view flowise-embed-react@<version> version
+
+# Check dist-tag points to the right version
+npm view flowise-embed@latest version
+npm view flowise-embed-react@dev version
+
+# Check the version bump PRs were created
+gh pr list --search "chore: bump flowise-embed"
+gh pr list --repo FlowiseAI/FlowiseEmbedReact --search "chore: bump flowise-embed-react"
+```
+
+### Important: merge PRs before next publish
+
+The workflow reads the current version from `package.json` on `main`. Since version bumps are delivered via PR (not direct push), you **must merge the version bump PRs before running the workflow again** — otherwise it will resolve to the same version and fail because it already exists on npm.
 
 ## Setup
 
 ### Secrets
 
-Add to **FlowiseChatEmbed** repo settings:
+Add to **FlowiseChatEmbed** repo settings (repository-level, not environment-level):
 
 | Secret       | Description                                                                                                                                         |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `NPM_TOKEN`  | npm **Automation** token with publish access to both `flowise-embed` and `flowise-embed-react`. Use the "Automation" type so it bypasses 2FA in CI. |
-| `PAT_GITHUB` | GitHub Personal Access Token with access to both `FlowiseChatEmbed` and `FlowiseEmbedReact` repos.                                                  |
+| `PAT_GITHUB` | GitHub Personal Access Token with write access to both `FlowiseChatEmbed` and `FlowiseEmbedReact` repos.                                            |
+
+**Important:** Secrets must be **repository-level** (not environment-level) so the dry-run job can access them.
 
 #### PAT options
 
 - **Classic PAT:** `repo` scope
-- **Fine-grained PAT (recommended):** Scope to the FlowiseAI org, select both repos, grant `Contents: Read and write`
-
-### Environment
-
-Create a `production` environment in **FlowiseChatEmbed** repo:
-
-This gates every workflow run behind a human approval step.
+- **Fine-grained PAT (recommended):** Scope to the FlowiseAI org, select both repos, grant `Contents: Read and write` and `Pull requests: Read and write`
 
 ## How it works
 
-### Version bump
+### Two-job structure
 
-`npm version <bump_type> --no-git-tag-version` updates `package.json` without creating npm's default `v3.1.3` tag. The workflow controls the exact tag format: `flowise-embed@3.1.3`.
+Every publish goes through two jobs:
+
+1. **dry-run** — builds both packages, runs `npm pack --dry-run` and `npm publish --dry-run`, displays the resolved version and package contents in the job summary. No approval needed — runs immediately.
+2. **publish** — gated behind the `npm-publish` environment. Only runs after a reviewer approves. Publishes to npm and creates version bump PRs.
+
+### Version resolution
+
+`npx semver` computes the new version from the current `package.json` version and the bump type. For `custom`, the input is validated as valid semver. For `prerelease`, versions use the `dev` pre-id (e.g. `3.1.4-dev.0`).
+
+### Dist-tags
+
+Both packages are published with the same dist-tag. Use `latest` for stable releases and `dev` for pre-releases. The workflow warns (but doesn't block) if a prerelease version is published with `latest` or a stable version with `dev`.
 
 ### Dependency update in FlowiseEmbedReact
 
-The workflow sets `devDependencies.flowise-embed` to the exact new version using `npm pkg set`. This changes the specifier (e.g. from `"latest"` to `"3.1.3"`), which forces yarn to re-resolve from the registry and update `yarn.lock`. Both `package.json` and `yarn.lock` are committed back to the repo.
+The workflow sets `devDependencies.flowise-embed` to the exact new version using `npm pkg set`. This changes the specifier (e.g. from `"latest"` to `"3.1.4"`), which forces yarn to re-resolve from the registry and update `yarn.lock`. Both `package.json` and `yarn.lock` are included in the version bump PR.
 
 ### npm registry propagation
 
 After publishing `flowise-embed`, there's a short delay before the version is available on the registry. The workflow polls `npm view` every 10 seconds for up to 2 minutes before proceeding to the `flowise-embed-react` steps.
 
+### Version bump PRs
+
+After publishing, the workflow creates version bump PRs in both repos instead of pushing directly to main:
+
+| Repo              | PR branch                                  | Files changed               |
+| ----------------- | ------------------------------------------ | --------------------------- |
+| FlowiseChatEmbed  | `chore/bump-flowise-embed-<version>`       | `package.json`              |
+| FlowiseEmbedReact | `chore/bump-flowise-embed-react-<version>` | `package.json`, `yarn.lock` |
+
 ### Husky suppression
 
-`HUSKY=0` is set during `yarn install` for FlowiseChatEmbed to prevent the `prepare` script (`husky install`) from failing in CI where there's no git hook context.
+`HUSKY=0` is set during `yarn install` to prevent the `prepare` script (`husky install`) from failing in CI.
 
-## What gets committed
+### What if PR creation fails?
 
-| Repo              | Files committed             | Tag format                  |
-| ----------------- | --------------------------- | --------------------------- |
-| FlowiseChatEmbed  | `package.json`              | `flowise-embed@3.1.3`       |
-| FlowiseEmbedReact | `package.json`, `yarn.lock` | `flowise-embed-react@3.1.3` |
+If npm publish succeeds but PR creation fails (e.g. permissions issue, branch already exists), the packages are already on npm — no rollback needed. You can manually create the version bump PR or push the version change directly. The PR step failing does not affect the published packages.
