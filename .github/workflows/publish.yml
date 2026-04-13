@@ -154,7 +154,7 @@ jobs:
 
       - name: Install flowise-embed-react dependencies
         working-directory: flowise-embed-react
-        run: yarn install --frozen-lockfile
+        run: yarn install
         env:
           HUSKY: '0'
 
