@@ -69,13 +69,24 @@ jobs:
             fi
           fi
 
+      - name: Generate Flowise Publish Bot Token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.FLOWISE_BOT_APP_ID }}
+          private-key: ${{ secrets.FLOWISE_BOT_PRIVATE_KEY }}
+          owner: FlowiseAI
+          repositories: |
+            FlowiseChatEmbed
+            FlowiseEmbedReact
+
       - name: Checkout FlowiseChatEmbed
         uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 1
           path: flowise-embed
-          token: ${{ secrets.PAT_GITHUB }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Checkout FlowiseEmbedReact
         uses: actions/checkout@v6
@@ -83,7 +94,7 @@ jobs:
           repository: FlowiseAI/FlowiseEmbedReact
           fetch-depth: 1
           path: flowise-embed-react
-          token: ${{ secrets.PAT_GITHUB }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -197,6 +208,7 @@ jobs:
   # Runs only after a reviewer approves via the npm-publish environment gate.
   # Publishes both packages to npm, then creates version bump PRs.
   publish:
+    if: false
     needs: dry-run
     runs-on: ubuntu-latest
     environment: npm-publish
@@ -204,13 +216,24 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      - name: Generate Flowise Publish Bot Token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.FLOWISE_BOT_APP_ID }}
+          private-key: ${{ secrets.FLOWISE_BOT_PRIVATE_KEY }}
+          owner: FlowiseAI
+          repositories: |
+            FlowiseChatEmbed
+            FlowiseEmbedReact
+
       - name: Checkout FlowiseChatEmbed
         uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 1
           path: flowise-embed
-          token: ${{ secrets.PAT_GITHUB }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Checkout FlowiseEmbedReact
         uses: actions/checkout@v6
@@ -218,7 +241,7 @@ jobs:
           repository: FlowiseAI/FlowiseEmbedReact
           fetch-depth: 1
           path: flowise-embed-react
-          token: ${{ secrets.PAT_GITHUB }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -228,8 +251,8 @@ jobs:
 
       - name: Configure git
         run: |
-          git config --global user.name  "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name  "flowise-publish-bot[bot]"
+          git config --global user.email "${{ secrets.FLOWISE_BOT_APP_ID }}+flowise-publish-bot[bot]@users.noreply.github.com"
 
       - name: Log publish intent
         env:
@@ -291,7 +314,7 @@ jobs:
         env:
           VERSION: ${{ needs.dry-run.outputs.version }}
           TAG: ${{ inputs.tag }}
-          GH_TOKEN: ${{ secrets.PAT_GITHUB }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           BRANCH="chore/bump-flowise-embed-${VERSION}"
           if git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null 2>&1; then
@@ -375,7 +398,7 @@ jobs:
         env:
           VERSION: ${{ needs.dry-run.outputs.version }}
           TAG: ${{ inputs.tag }}
-          GH_TOKEN: ${{ secrets.PAT_GITHUB }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           BRANCH="chore/bump-flowise-embed-react-${VERSION}"
           if git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null 2>&1; then
