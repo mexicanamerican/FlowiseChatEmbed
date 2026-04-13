@@ -331,7 +331,6 @@ jobs:
         run: |
           npm pkg set "version=${NEW_VERSION}"
           npm pkg set "devDependencies.flowise-embed=${NEW_VERSION}"
-          yarn upgrade "flowise-embed@${NEW_VERSION}"
 
       - name: Install flowise-embed-react dependencies
         working-directory: flowise-embed-react
