@@ -2,6 +2,7 @@ import styles from '../../../assets/index.css';
 import { Bot, BotProps } from '@/components/Bot';
 import { BubbleParams } from '@/features/bubble/types';
 import { createSignal, onCleanup, onMount, Show } from 'solid-js';
+import { resolveDialogContainer } from '@/utils';
 
 const defaultButtonColor = '#3B81F6';
 const defaultIconColor = 'white';
@@ -102,6 +103,7 @@ export const Full = (props: FullProps, { element }: { element: HTMLElement }) =>
             disclaimer={props.theme?.disclaimer}
             dateTimeToggle={props.theme?.chatWindow?.dateTimeToggle}
             renderHTML={props.theme?.chatWindow?.renderHTML}
+            dialogContainer={resolveDialogContainer(props.dialogContainer)}
           />
         </div>
       </Show>
