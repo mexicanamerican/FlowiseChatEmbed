@@ -153,6 +153,23 @@ export const getCookie = (cname: string): string => {
   return '';
 };
 
+export const resolveDialogContainer = (raw: unknown): HTMLElement | undefined => {
+  if (typeof raw === 'string') {
+    try {
+      const el = document.querySelector(raw) as HTMLElement | null;
+      if (el === null) {
+        console.warn(`[Flowise] dialogContainer selector "${raw}" did not match any element. Dialog will render inline.`);
+      }
+      return el ?? undefined;
+    } catch {
+      console.warn(`[Flowise] Invalid dialogContainer selector: "${raw}". Dialog will render inline.`);
+      return undefined;
+    }
+  }
+  if (raw instanceof HTMLElement) return raw;
+  return undefined;
+};
+
 export const getRecordingExtensionForMime = (mime: string) => {
   const mimeToExt: Record<string, string> = {
     'audio/webm': 'webm',

@@ -4,7 +4,7 @@ import { BubbleButton } from './BubbleButton';
 import { BubbleParams } from '../types';
 import { Bot, BotProps } from '../../../components/Bot';
 import Tooltip from './Tooltip';
-import { getBubbleButtonSize } from '@/utils';
+import { getBubbleButtonSize, resolveDialogContainer } from '@/utils';
 import DOMPurify from 'dompurify';
 
 const defaultButtonColor = '#3B81F6';
@@ -211,7 +211,7 @@ export const Bubble = (props: BubbleProps) => {
               renderHTML={props.theme?.chatWindow?.renderHTML}
               hasCustomHeader={!!bubbleProps.theme?.chatWindow?.headerHtml}
               closeBot={closeBot}
-              dialogContainer={bubbleContainerRef()}
+              dialogContainer={resolveDialogContainer(props.dialogContainer) ?? bubbleContainerRef()}
             />
           </div>
         </Show>

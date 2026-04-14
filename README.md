@@ -242,6 +242,65 @@ You can also customize chatbot with different configuration
 </script>
 ```
 
+## Dialog Portal (`dialogContainer`)
+
+By default, the `NodeDetailsDialog` (shown when clicking an agent node in the workflow tree view) renders inside the chatbot's shadow DOM. This means its `position: fixed` and `z-index` values are relative to the shadow host element, not the top-level page — which can cause the dialog to appear behind other page elements.
+
+The `dialogContainer` prop lets you render the dialog into a host-page element instead, placing it in the document's stacking context so it always appears on top.
+
+**Works with both `init` (popup) and `initFull` (full-page) embed modes.**
+
+### Usage
+
+Pass a CSS selector string or a direct `HTMLElement` reference:
+
+```html
+<!-- Add a portal target anywhere in your page -->
+<div id="flowise-portal"></div>
+
+<script type="module">
+  import Chatbot from 'https://cdn.jsdelivr.net/npm/flowise-embed/dist/web.js';
+
+  // Using a CSS selector string
+  Chatbot.init({
+    chatflowid: '<chatflowid>',
+    apiHost: 'http://localhost:3000',
+    dialogContainer: '#flowise-portal',
+  });
+
+  // Or pass a direct element reference
+  Chatbot.init({
+    chatflowid: '<chatflowid>',
+    apiHost: 'http://localhost:3000',
+    dialogContainer: document.getElementById('flowise-portal'),
+  });
+</script>
+```
+
+The same options apply to `initFull`:
+
+```html
+<div id="flowise-portal"></div>
+<flowise-fullchatbot></flowise-fullchatbot>
+
+<script type="module">
+  import Chatbot from 'https://cdn.jsdelivr.net/npm/flowise-embed/dist/web.js';
+  Chatbot.initFull({
+    chatflowid: '<chatflowid>',
+    apiHost: 'http://localhost:3000',
+    dialogContainer: '#flowise-portal',
+  });
+</script>
+```
+
+### Notes
+
+- The `NodeDetailsDialog` will only render if `chatWindow.showAgentMessages` is `true`
+- If `dialogContainer` is omitted, the dialog renders inline inside the shadow DOM (existing behaviour, no change).
+- In popup mode (`init`), if `dialogContainer` is not provided the dialog falls back to rendering inside the bubble's own container.
+- If a CSS selector string is provided but no matching element exists in the DOM at initialisation time, the dialog falls back to inline rendering and a warning is logged to the console.
+- The portal target element itself does not need any particular styling — the dialog uses `position: fixed` to position itself within the viewport.
+
 ## (Experimental) Proxy Server Setup
 
 The Flowise Embed Proxy Server enhances the security of your chatbot implementation by acting as a protective intermediary layer. This server eliminates the need to expose sensitive Flowise instance details in your frontend code and provides several key security benefits:

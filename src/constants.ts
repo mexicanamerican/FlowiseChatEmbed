@@ -7,6 +7,7 @@ export const defaultBotProps: BubbleProps = {
   chatflowConfig: undefined,
   theme: undefined,
   observersConfig: undefined,
+  dialogContainer: undefined,
 };
 
 export const CHAT_HEADER_HEIGHT = 50;

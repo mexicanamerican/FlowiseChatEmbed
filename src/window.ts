@@ -10,6 +10,18 @@ type BotProps = {
   chatflowConfig?: Record<string, unknown>;
   observersConfig?: observersConfigType;
   theme?: BubbleTheme;
+  /**
+   * Portal target for NodeDetailsDialog. When provided, the dialog renders
+   * into this element (outside the shadow DOM) so that `position: fixed` and
+   * `z-index` operate in the host page's stacking context.
+   *
+   * Works with both `init` (bubble) and `initFull` (full-page) embed modes.
+   * In bubble mode, falls back to the bubble's own container when not supplied.
+   *
+   * Accepts either a CSS selector string (resolved via `document.querySelector`)
+   * or a plain `HTMLElement` reference.
+   */
+  dialogContainer?: string | HTMLElement;
 };
 
 let elementUsed: Element | undefined;

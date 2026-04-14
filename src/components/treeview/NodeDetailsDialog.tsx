@@ -330,7 +330,7 @@ const Collapsible = (props: { header: JSXElement; children: JSXElement; borderCo
           border: 'none',
           background: 'transparent',
         }}
-        onClick={toggle}
+        on:click={toggle}
         aria-expanded={isOpen()}
       >
         <span style={{ flex: '1', display: 'flex', 'align-items': 'center', gap: '8px', 'text-align': 'left' }}>{props.header}</span>
@@ -492,7 +492,7 @@ const FileAnnotationLink = (props: { annotation: any; apiHost?: string; chatflow
         'font-size': '0.8rem',
         color: 'inherit',
       }}
-      onClick={handleDownload}
+      on:click={handleDownload}
       title={`Download ${props.annotation.fileName}`}
     >
       <span>{props.annotation.fileName}</span>
@@ -626,7 +626,7 @@ export const NodeDetailsDialog = (props: NodeDetailsDialogProps) => {
                       cursor: 'pointer',
                       transition: 'filter 0.15s ease',
                     }}
-                    onClick={() => setToolDetailData(tool)}
+                    on:click={() => setToolDetailData(tool)}
                   >
                     <NodeIcon name={getToolIconName(tool.tool, data?.output?.availableTools)} apiHost={props.apiHost} size={16} borderRadius="4px" />{' '}
                     {tool.tool}
@@ -857,7 +857,7 @@ export const NodeDetailsDialog = (props: NodeDetailsDialogProps) => {
                             cursor: 'pointer',
                             transition: 'filter 0.15s ease',
                           }}
-                          onClick={() => setToolDetailData(tool)}
+                          on:click={() => setToolDetailData(tool)}
                         >
                           <NodeIcon
                             name={getToolIconName(tool.tool, data.output?.availableTools)}
@@ -993,7 +993,7 @@ export const NodeDetailsDialog = (props: NodeDetailsDialogProps) => {
           outline: 'none',
           'padding-top': `${dialogPaddingTop()}px`,
         }}
-        onClick={() => props.onClose()}
+        on:click={() => props.onClose()}
       >
         <div
           class="node-details-dialog-paper"
@@ -1012,7 +1012,7 @@ export const NodeDetailsDialog = (props: NodeDetailsDialogProps) => {
             'overflow-y': 'auto',
             outline: 'none',
           }}
-          onClick={(e) => e.stopPropagation()}
+          on:click={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div
@@ -1110,7 +1110,7 @@ export const NodeDetailsDialog = (props: NodeDetailsDialogProps) => {
                 'border-bottom': viewMode() === 'rendered' ? '2px solid #1976d2' : '2px solid transparent',
                 'margin-bottom': '-1px',
               }}
-              onClick={() => setViewMode('rendered')}
+              on:click={() => setViewMode('rendered')}
             >
               Rendered
             </button>
@@ -1129,7 +1129,7 @@ export const NodeDetailsDialog = (props: NodeDetailsDialogProps) => {
                 'border-bottom': viewMode() === 'raw' ? '2px solid #1976d2' : '2px solid transparent',
                 'margin-bottom': '-1px',
               }}
-              onClick={() => setViewMode('raw')}
+              on:click={() => setViewMode('raw')}
             >
               Raw
             </button>
@@ -1147,7 +1147,7 @@ export const NodeDetailsDialog = (props: NodeDetailsDialogProps) => {
       <Show when={toolDetailData()}>
         <div
           style={{ position: 'fixed', inset: '0', 'z-index': 1004, display: 'flex', 'align-items': 'center', 'justify-content': 'center' }}
-          onClick={() => setToolDetailData(null)}
+          on:click={() => setToolDetailData(null)}
         >
           <div
             style={{
@@ -1164,7 +1164,7 @@ export const NodeDetailsDialog = (props: NodeDetailsDialogProps) => {
               'max-height': `calc(100% - ${CHAT_HEADER_HEIGHT}px)`,
               overflow: 'hidden',
             }}
-            onClick={(e) => e.stopPropagation()}
+            on:click={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div
@@ -1213,7 +1213,7 @@ export const NodeDetailsDialog = (props: NodeDetailsDialogProps) => {
                   color: 'inherit',
                   opacity: '0.7',
                 }}
-                onClick={() => setToolDetailData(null)}
+                on:click={() => setToolDetailData(null)}
                 title="Close"
               >
                 <CloseIcon />
@@ -1227,7 +1227,7 @@ export const NodeDetailsDialog = (props: NodeDetailsDialogProps) => {
         </div>
         <div
           style={{ position: 'fixed', inset: '0', 'z-index': 1003, 'background-color': 'rgba(0,0,0,0.35)' }}
-          onClick={(e) => {
+          on:click={(e) => {
             e.stopPropagation();
             setToolDetailData(null);
           }}
@@ -1236,7 +1236,7 @@ export const NodeDetailsDialog = (props: NodeDetailsDialogProps) => {
 
       <div
         style={{ position: 'fixed', inset: '0', 'z-index': 1001, 'background-color': 'rgba(0,0,0,0.25)', 'pointer-events': 'auto' }}
-        onClick={() => props.onClose()}
+        on:click={() => props.onClose()}
       />
     </>
   );
