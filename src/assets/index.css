@@ -518,7 +518,7 @@ textarea {
   margin-top: 0.3em;
   margin-bottom: 0.3em;
   padding-left: 0.75em;
-  border-left-width: 3px;
+  border-left: 3px solid currentColor;
 }
 
 .chatbot-host-bubble.prose pre,
@@ -526,6 +526,10 @@ textarea {
   margin-top: 0.4em;
   margin-bottom: 0.4em;
   font-size: 0.85em;
+  padding: 5px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 .chatbot-host-bubble.prose hr,
