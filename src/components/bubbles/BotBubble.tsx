@@ -345,7 +345,7 @@ export const BotBubble = (props: Props) => {
           <span
             ref={setArtifactRef}
             innerHTML={Marked.parse(item.data as string)}
-            class="prose"
+            class="chatbot-host-bubble prose"
             style={{
               'background-color': props.backgroundColor ?? defaultBackgroundColor,
               color: props.textColor ?? defaultTextColor,

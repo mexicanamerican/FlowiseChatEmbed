@@ -451,6 +451,110 @@ textarea {
   font-size: inherit;
 }
 
+.chatbot-host-bubble.prose,
+.chatbot-host-bubble .prose {
+  font-size: inherit;
+  line-height: 1.55;
+}
+
+.chatbot-host-bubble.prose h1,
+.chatbot-host-bubble .prose h1 {
+  font-size: 1.25em;
+  font-weight: 700;
+  margin-top: 0.6em;
+  margin-bottom: 0.3em;
+  line-height: 1.3;
+}
+
+.chatbot-host-bubble.prose h2,
+.chatbot-host-bubble .prose h2 {
+  font-size: 1.125em;
+  font-weight: 600;
+  margin-top: 0.5em;
+  margin-bottom: 0.25em;
+  line-height: 1.35;
+}
+
+.chatbot-host-bubble.prose h3,
+.chatbot-host-bubble .prose h3 {
+  font-size: 1em;
+  font-weight: 600;
+  margin-top: 0.4em;
+  margin-bottom: 0.2em;
+  line-height: 1.4;
+}
+
+:is(.chatbot-host-bubble.prose, .chatbot-host-bubble .prose) :is(h4, h5, h6) {
+  font-size: 0.95em;
+  font-weight: 600;
+  margin-top: 0.3em;
+  margin-bottom: 0.15em;
+  line-height: 1.4;
+}
+
+.chatbot-host-bubble.prose p,
+.chatbot-host-bubble .prose p {
+  margin-top: 0.35em;
+  margin-bottom: 0.35em;
+}
+
+.chatbot-host-bubble.prose ul,
+.chatbot-host-bubble .prose ul,
+.chatbot-host-bubble.prose ol,
+.chatbot-host-bubble .prose ol {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+  padding-left: 1.25em;
+}
+
+.chatbot-host-bubble.prose li,
+.chatbot-host-bubble .prose li {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+.chatbot-host-bubble.prose blockquote,
+.chatbot-host-bubble .prose blockquote {
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+  padding-left: 0.75em;
+  border-left: 3px solid currentColor;
+}
+
+.chatbot-host-bubble.prose pre,
+.chatbot-host-bubble .prose pre {
+  margin-top: 0.4em;
+  margin-bottom: 0.4em;
+  font-size: 0.85em;
+  padding: 5px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.chatbot-host-bubble.prose hr,
+.chatbot-host-bubble .prose hr {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.chatbot-host-bubble.prose table,
+.chatbot-host-bubble .prose table {
+  font-size: 0.9em;
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+}
+
+.chatbot-host-bubble.prose > :first-child,
+.chatbot-host-bubble .prose > :first-child {
+  margin-top: 0;
+}
+
+.chatbot-host-bubble.prose > :last-child,
+.chatbot-host-bubble .prose > :last-child {
+  margin-bottom: 0;
+}
+
 .center {
   display: flex;
   justify-content: center;
