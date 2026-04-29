@@ -189,7 +189,9 @@ export const BotBubble = (props: Props) => {
     const visitedURLs: string[] = [];
     const newSourceDocuments: any = [];
 
-    message.sourceDocuments.forEach((source: any) => {
+    const sourceDocuments = Array.isArray(message.sourceDocuments) ? message.sourceDocuments : [];
+    sourceDocuments.forEach((source: any) => {
+      if (!source || !source.metadata) return;
       if (isValidURL(source.metadata.source) && !visitedURLs.includes(source.metadata.source)) {
         visitedURLs.push(source.metadata.source);
         newSourceDocuments.push(source);
@@ -510,12 +512,22 @@ export const BotBubble = (props: Props) => {
         </div>
       </div>
       <div>
-        {props.message.sourceDocuments && props.message.sourceDocuments.length && (
-          <>
+        {props.message.sourceDocuments && props.message.sourceDocuments.length > 0 && (
+          <div style={{ padding: '6px 8px 2px 8px' }}>
             <Show when={props.sourceDocsTitle}>
-              <span class="px-2 py-[10px] font-semibold">{props.sourceDocsTitle}</span>
+              <span
+                class="px-2 py-[10px] font-semibold"
+                style={{
+                  display: 'block',
+                  'font-size': '11px',
+                  'text-transform': 'uppercase',
+                  'margin-bottom': '4px',
+                }}
+              >
+                {props.sourceDocsTitle}
+              </span>
             </Show>
-            <div style={{ display: 'flex', 'flex-direction': 'row', width: '100%', 'flex-wrap': 'wrap' }}>
+            <div style={{ display: 'flex', 'flex-direction': 'row', width: '100%', 'flex-wrap': 'wrap', gap: '6px' }}>
               <For each={[...removeDuplicateURL(props.message)]}>
                 {(src) => {
                   const URL = isValidURL(src.metadata.source);
@@ -523,6 +535,7 @@ export const BotBubble = (props: Props) => {
                     <SourceBubble
                       pageContent={src.metadata.title ? src.metadata.title : URL ? URL.pathname : src.pageContent}
                       metadata={src.metadata}
+                      backgroundColor={props.backgroundColor ?? defaultBackgroundColor}
                       onSourceClick={() => {
                         if (URL) {
                           window.open(src.metadata.source, '_blank');
@@ -535,7 +548,7 @@ export const BotBubble = (props: Props) => {
                 }}
               </For>
             </div>
-          </>
+          </div>
         )}
       </div>
       <div>
